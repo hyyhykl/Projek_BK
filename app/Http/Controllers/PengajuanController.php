@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Pengajuan;
 use App\Models\Lokasi;
+use App\Models\User;
+use App\Notifications\PengajuanBaruNotification;  
+use App\Notifications\StatusPengajuanNotification;
+use Illuminate\Support\Facades\Notification; 
 use Illuminate\Http\Request;
 
 class PengajuanController extends Controller
@@ -67,15 +71,22 @@ class PengajuanController extends Controller
             'status' => 'Menunggu'
         ]);
 
+        $pengajuan = Pengajuan::latest()->first();
+
+        $users = User::where('role', 'admin')->get();
+        foreach ($users as $user) {
+            $user->notify(new PengajuanBaruNotification($pengajuan));
+        }
         return redirect()->route('pengajuan.index')->with('success', 'Pengajuan berhasil ditambahkan.');
     }
 
     /**
      * Display the specified resource.
      */
-    public function show(Pengajuan $pengajuan)
+    public function show($id)
     {
-        //
+        $pengajuan = Pengajuan::with('lokasi')->findOrFail($id);
+        return response()->json($pengajuan);
     }
 
     /**
@@ -113,6 +124,23 @@ class PengajuanController extends Controller
         }
 
         $pengajuan->save();
+
+        // Kirim notifikasi ke pelapor jika ada user terkait, jika tidak kirim ke admin
+        $user = null;
+        if (!empty($pengajuan->user_id)) {
+            $user = \App\Models\User::find($pengajuan->user_id);
+        } elseif (!empty($pengajuan->email)) {
+            $user = \App\Models\User::where('email', $pengajuan->email)->first();
+        }
+
+        if ($user) {
+            $user->notify(new \App\Notifications\StatusPengajuanNotification($pengajuan));
+        } else {
+            $admins = \App\Models\User::where('role', 'admin')->get();
+            if ($admins->isNotEmpty()) {
+                \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\StatusPengajuanNotification($pengajuan));
+            }
+        }
 
         return redirect()->back()->with('success', 'Status pengajuan berhasil diperbarui.');
     }

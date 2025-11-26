@@ -29,7 +29,6 @@
     <!-- Required Js -->
     <script src="{{ asset('flat/assets/js/vendor-all.min.js') }}"></script>
     <script src="{{ asset('flat/assets/js/plugins/bootstrap.min.js') }}"></script>
-    <script src="{{ asset('flat/assets/js/pcoded.min.js') }}"></script>
     <!-- Apex Chart -->
     <script src="{{ asset('flat/assets/js/plugins/apexcharts.min.js') }}"></script>
     <!-- custom-chart js -->

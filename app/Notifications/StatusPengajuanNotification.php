@@ -2,53 +2,48 @@
 
 namespace App\Notifications;
 
+use App\Models\Pengajuan;
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
-use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 
 class StatusPengajuanNotification extends Notification
 {
     use Queueable;
 
+    protected Pengajuan $pengajuan;
+
     /**
      * Create a new notification instance.
      */
-    public function __construct()
+    public function __construct(Pengajuan $pengajuan)
     {
-        //
+        $this->pengajuan = $pengajuan;
     }
 
     /**
      * Get the notification's delivery channels.
-     *
-     * @return array<int, string>
      */
     public function via(object $notifiable): array
     {
-        return ['mail'];
+        return ['database'];
     }
 
     /**
-     * Get the mail representation of the notification.
+     * Data yang disimpan ke database
      */
-    public function toMail(object $notifiable): MailMessage
+    public function toDatabase(object $notifiable): array
     {
-        return (new MailMessage)
-                    ->line('The introduction to the notification.')
-                    ->action('Notification Action', url('/'))
-                    ->line('Thank you for using our application!');
+        return [
+            'message' => "Status pengajuan Anda kini: {$this->pengajuan->status}",
+            'pengajuan_id' => $this->pengajuan->id,
+        ];
     }
 
     /**
-     * Get the array representation of the notification.
-     *
-     * @return array<string, mixed>
+     * Tidak digunakan, tapi biarkan ada
      */
     public function toArray(object $notifiable): array
     {
-        return [
-            //
-        ];
+        return [];
     }
 }
