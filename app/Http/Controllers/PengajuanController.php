@@ -12,9 +12,6 @@ use Illuminate\Http\Request;
 
 class PengajuanController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index(Request $request)
     {
         $status = $request->status;
@@ -22,33 +19,21 @@ class PengajuanController extends Controller
         $tanggal = $request->tanggal;
 
         $pengajuan = Pengajuan::query()
-            ->when($status, function($q) use($status) {
-                $q->where('status', $status);
-            })
-            ->when($nama, function($q) use($nama) {
-                $q->where('nama_pelapor', 'LIKE', "%$nama%");
-            })
-            ->when($tanggal, function($q) use($tanggal) {
-                $q->whereDate('created_at', $tanggal);
-            })
+            ->when($status, fn($q) => $q->where('status', $status))
+            ->when($nama, fn($q) => $q->where('nama_pelapor', 'LIKE', "%$nama%"))
+            ->when($tanggal, fn($q) => $q->whereDate('created_at', $tanggal))
             ->latest()
             ->get();
 
         return view('pengajuan.index', compact('pengajuan', 'status', 'nama', 'tanggal'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
         $lokasi = Lokasi::all();
         return view('pengajuan.create', compact('lokasi'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
         $request->validate([
@@ -58,65 +43,73 @@ class PengajuanController extends Controller
             'foto' => 'image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        $foto = null;
-        if ($request->hasFile('foto')) {
-            $foto = $request->file('foto')->store('pengajuan_foto', 'public');
-        }
+        $foto = $request->hasFile('foto')
+            ? $request->file('foto')->store('pengajuan_foto', 'public')
+            : null;
 
-        Pengajuan::create([
+        $pengajuan = Pengajuan::create([
             'nama_pelapor' => $request->nama_pelapor,
-            'lokasi_id' => $request->lokasi_id,
-            'deskripsi' => $request->deskripsi,
-            'foto' => $foto,
-            'status' => 'Menunggu'
+            'lokasi_id'    => $request->lokasi_id,
+            'deskripsi'    => $request->deskripsi,
+            'foto'         => $foto,
+            'status'       => 'Menunggu'
         ]);
 
-        $pengajuan = Pengajuan::latest()->first();
+        // Kirim notifikasi ke admin
+        $admins = User::where('role', 'admin')->get();
+        Notification::send($admins, new PengajuanBaruNotification($pengajuan));
 
-        $users = User::where('role', 'admin')->get();
-        foreach ($users as $user) {
-            $user->notify(new PengajuanBaruNotification($pengajuan));
-        }
         return redirect()->route('pengajuan.index')->with('success', 'Pengajuan berhasil ditambahkan.');
     }
 
-    /**
-     * Display the specified resource.
-     */
     public function show($id)
     {
-        $pengajuan = Pengajuan::with('lokasi')->findOrFail($id);
-        return response()->json($pengajuan);
+        return response()->json(
+            Pengajuan::with('lokasi')->findOrFail($id)
+        );
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Pengajuan $pengajuan)
-    {
-        
-    }
+    public function edit(Pengajuan $pengajuan) {}
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, Pengajuan $pengajuan)
-    {
-        //
-    }
+    public function update(Request $request, Pengajuan $pengajuan) {}
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Pengajuan $pengajuan)
     {
-        //
+        // boleh hapus jika status = selesai
+        if ($pengajuan->status !== 'Selesai') {
+            return back()->with('error', 'Hanya data selesai yang boleh dihapus.');
+        }
+
+        $pengajuan->delete();
+        return back()->with('success', 'Data berhasil dihapus.');
     }
 
-    public function updateStatus($id)
+    /**
+     * Update Status FINAL VERSION
+     */
+    public function updateStatus(Request $request, $id)
     {
         $pengajuan = Pengajuan::findOrFail($id);
 
+        // jika input status dikirim dari form
+        if ($request->has('status')) {
+            $newStatus = $request->input('status');
+
+            $allowed = ['Menunggu', 'Diproses', 'Selesai', 'Dibatalkan'];
+            if (! in_array($newStatus, $allowed)) {
+                return back()->with('error', 'Status tidak valid.');
+            }
+
+            $pengajuan->status = $newStatus;
+            $pengajuan->save();
+
+            // KIRIM NOTIFIKASI
+            $this->sendStatusNotification($pengajuan);
+
+            return back()->with('success', "Status diubah menjadi $newStatus.");
+        }
+
+        // fallback toggle (jika tidak ada input)
         if ($pengajuan->status == 'Menunggu') {
             $pengajuan->status = 'Diproses';
         } elseif ($pengajuan->status == 'Diproses') {
@@ -125,23 +118,37 @@ class PengajuanController extends Controller
 
         $pengajuan->save();
 
-        // Kirim notifikasi ke pelapor jika ada user terkait, jika tidak kirim ke admin
-        $user = null;
-        if (!empty($pengajuan->user_id)) {
-            $user = \App\Models\User::find($pengajuan->user_id);
-        } elseif (!empty($pengajuan->email)) {
-            $user = \App\Models\User::where('email', $pengajuan->email)->first();
-        }
+        // kirim notifikasi
+        $this->sendStatusNotification($pengajuan);
 
-        if ($user) {
-            $user->notify(new \App\Notifications\StatusPengajuanNotification($pengajuan));
-        } else {
-            $admins = \App\Models\User::where('role', 'admin')->get();
-            if ($admins->isNotEmpty()) {
-                \Illuminate\Support\Facades\Notification::send($admins, new \App\Notifications\StatusPengajuanNotification($pengajuan));
+        return back()->with('success', 'Status pengajuan berhasil diperbarui.');
+    }
+
+    /**
+     * Fungsi kirim notifikasi (dipakai dua tempat)
+     */
+    private function sendStatusNotification(Pengajuan $pengajuan)
+    {
+        // jika pengajuan terkait user
+        if (!empty($pengajuan->user_id)) {
+            $user = User::find($pengajuan->user_id);
+            if ($user) {
+                $user->notify(new StatusPengajuanNotification($pengajuan));
+                return;
             }
         }
 
-        return redirect()->back()->with('success', 'Status pengajuan berhasil diperbarui.');
+        // cek berdasarkan email jika ada
+        if (!empty($pengajuan->email)) {
+            $user = User::where('email', $pengajuan->email)->first();
+            if ($user) {
+                $user->notify(new StatusPengajuanNotification($pengajuan));
+                return;
+            }
+        }
+
+        // default → kirim ke semua admin
+        $admins = User::where('role', 'admin')->get();
+        Notification::send($admins, new StatusPengajuanNotification($pengajuan));
     }
 }

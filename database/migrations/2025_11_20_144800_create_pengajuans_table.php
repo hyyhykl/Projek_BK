@@ -17,7 +17,7 @@ return new class extends Migration
             $table->unsignedBigInteger('lokasi_id');
             $table->text('deskripsi');
             $table->string('foto')->nullable();
-            $table->enum('status', ['Menunggu', 'Diproses', 'Selesai'])->default('Menunggu');
+            $table->enum('status', ['Menunggu', 'Diproses', 'Selesai', 'Dibatalkan'])->default('Menunggu');
             $table->timestamps();
         });
     }
