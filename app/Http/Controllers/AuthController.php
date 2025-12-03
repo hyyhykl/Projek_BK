@@ -29,41 +29,13 @@ class AuthController extends Controller
 
     public function dashboard()
     {
-        // =============================
-        //  TAMU
-        // =============================
-        if (session('role') == 'tamu') {
-            return view('dashboard', [
-                'role' => 'tamu',
-                'menunggu' => 0,
-                'diproses' => 0,
-                'selesai' => 0,
-                'dibatalkan' => 0,
-                'kerusakanBerulang' => [],
-                'weekLabels' => [],
-                'weekMenunggu' => [],
-                'weekDiproses' => [],
-                'weekSelesai' => [],
-                'weekDibatalkan' => [],
-                'monthLabels' => [],
-                'monthMenunggu' => [],
-                'monthDiproses' => [],
-                'monthSelesai' => [],
-                'monthDibatalkan' => []
-            ]);
-        }
+        $role = session('role');
 
-        // =============================
-        // 1. REKAP TOTAL STATUS
-        // =============================
         $menunggu    = Pengajuan::where('status', 'Menunggu')->count();
         $diproses    = Pengajuan::where('status', 'Diproses')->count();
         $selesai     = Pengajuan::where('status', 'Selesai')->count();
         $dibatalkan  = Pengajuan::where('status', 'Dibatalkan')->count();
 
-        // =============================
-        // 2. KERUSAKAN BERULANG
-        // =============================
         $startDate = Carbon::now()->subDays(7);
         $kerusakanBerulang = Pengajuan::select('lokasi_id', 'deskripsi', DB::raw('COUNT(*) as total'))
             ->where('created_at', '>=', $startDate)
@@ -72,9 +44,6 @@ class AuthController extends Controller
             ->with('lokasi')
             ->get();
 
-        // =============================
-        // 3. CHART PER MINGGU (MULTI SERIES)
-        // =============================
         $weekData = Pengajuan::select(
                 DB::raw('WEEK(created_at) as week'),
                 DB::raw('SUM(status = "Menunggu") as menunggu'),
@@ -93,9 +62,6 @@ class AuthController extends Controller
         $weekSelesai     = $weekData->pluck('selesai');
         $weekDibatalkan  = $weekData->pluck('dibatalkan');
 
-        // =============================
-        // 4. CHART PER BULAN (MULTI SERIES)
-        // =============================
         $monthData = Pengajuan::select(
                 DB::raw('MONTH(created_at) as month'),
                 DB::raw('SUM(status = "Menunggu") as menunggu'),
@@ -114,35 +80,24 @@ class AuthController extends Controller
         $monthSelesai     = $monthData->pluck('selesai');
         $monthDibatalkan  = $monthData->pluck('dibatalkan');
 
-        // =============================
-        // KIRIM KE VIEW
-        // =============================
-        return view('dashboard', [
-            'role' => Auth::user()->role,
-
-            // total
-            'menunggu'   => $menunggu,
-            'diproses'   => $diproses,
-            'selesai'    => $selesai,
-            'dibatalkan' => $dibatalkan,
-
-            // kerusakan berulang
-            'kerusakanBerulang' => $kerusakanBerulang,
-
-            // weekly chart
-            'weekLabels'      => $weekLabels,
-            'weekMenunggu'    => $weekMenunggu,
-            'weekDiproses'    => $weekDiproses,
-            'weekSelesai'     => $weekSelesai,
-            'weekDibatalkan'  => $weekDibatalkan,
-
-            // monthly chart
-            'monthLabels'      => $monthLabels,
-            'monthMenunggu'    => $monthMenunggu,
-            'monthDiproses'    => $monthDiproses,
-            'monthSelesai'     => $monthSelesai,
-            'monthDibatalkan'  => $monthDibatalkan,
-        ]);
+        return view('dashboard', compact(
+            'role',
+            'menunggu',
+            'diproses',
+            'selesai',
+            'dibatalkan',
+            'kerusakanBerulang',
+            'weekLabels',
+            'weekMenunggu',
+            'weekDiproses',
+            'weekSelesai',
+            'weekDibatalkan',
+            'monthLabels',
+            'monthMenunggu',
+            'monthDiproses',
+            'monthSelesai',
+            'monthDibatalkan'
+        ));
     }
 
     public function logout(Request $request)
