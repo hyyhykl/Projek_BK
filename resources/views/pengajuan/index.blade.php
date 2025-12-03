@@ -57,7 +57,7 @@
                             @elseif ($item->status == 'Selesai')
                                 <span class="badge badge-light-success">Selesai</span>
                             @elseif ($item->status == 'Dibatalkan')
-                                <span class="badge badge-light-danger">Dibatalkan</span>
+                                <span class="badge badge-light-danger">Dibatalkan/Gagal</span>
                             @endif
                         </td>
 
@@ -150,7 +150,7 @@
                                             @elseif ($item->status == 'Selesai')
                                                 <span class="badge badge-light-success">Selesai</span>
                                             @elseif ($item->status == 'Dibatalkan')
-                                                <span class="badge badge-light-danger">Dibatalkan</span>
+                                                <span class="badge badge-light-danger">Dibatalkan/Gagal</span>
                                             @endif
                                         </div>
                                     </div>

@@ -109,7 +109,7 @@
             { name: 'Menunggu', data: {!! json_encode($weekMenunggu) !!} },
             { name: 'Diproses', data: {!! json_encode($weekDiproses) !!} },
             { name: 'Selesai',  data: {!! json_encode($weekSelesai) !!} },
-            { name: 'Dibatalkan', data: {!! json_encode($weekDibatalkan) !!} }
+            { name: 'Dibatalkan/Gagal', data: {!! json_encode($weekDibatalkan) !!} }
         ],
         xaxis: {
             categories: {!! json_encode($weekLabels) !!},
@@ -130,7 +130,7 @@
             { name: 'Menunggu', data: {!! json_encode($monthMenunggu) !!} },
             { name: 'Diproses', data: {!! json_encode($monthDiproses) !!} },
             { name: 'Selesai',  data: {!! json_encode($monthSelesai) !!} },
-            { name: 'Dibatalkan', data: {!! json_encode($monthDibatalkan) !!} }
+            { name: 'Dibatalkan/Gagal', data: {!! json_encode($monthDibatalkan) !!} }
         ],
         xaxis: {
             categories: {!! json_encode($monthLabels) !!}
