@@ -91,37 +91,35 @@ class PengajuanController extends Controller
     {
         $pengajuan = Pengajuan::findOrFail($id);
 
-        // jika input status dikirim dari form
+        // VALIDASI
+        $allowed = ['Menunggu', 'Diproses', 'Selesai', 'Dibatalkan'];
+
         if ($request->has('status')) {
             $newStatus = $request->input('status');
 
-            $allowed = ['Menunggu', 'Diproses', 'Selesai', 'Dibatalkan'];
             if (! in_array($newStatus, $allowed)) {
                 return back()->with('error', 'Status tidak valid.');
+            }
+
+            // Jika dibatalkan, wajib ada alasan
+            if ($newStatus == 'Dibatalkan') {
+                $request->validate([
+                    'alasan_dibatalkan' => 'required'
+                ]);
+
+                $pengajuan->alasan_dibatalkan = $request->input('alasan_dibatalkan');
             }
 
             $pengajuan->status = $newStatus;
             $pengajuan->save();
 
-            // KIRIM NOTIFIKASI
+            // NOTIFIKASI
             $this->sendStatusNotification($pengajuan);
 
             return back()->with('success', "Status diubah menjadi $newStatus.");
         }
 
-        // fallback toggle (jika tidak ada input)
-        if ($pengajuan->status == 'Menunggu') {
-            $pengajuan->status = 'Diproses';
-        } elseif ($pengajuan->status == 'Diproses') {
-            $pengajuan->status = 'Selesai';
-        }
-
-        $pengajuan->save();
-
-        // kirim notifikasi
-        $this->sendStatusNotification($pengajuan);
-
-        return back()->with('success', 'Status pengajuan berhasil diperbarui.');
+        return back()->with('error', 'Aksi tidak valid.');
     }
 
     /**

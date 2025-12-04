@@ -55,9 +55,8 @@
             <ul style="list-style:none;padding-left:0;">
                 @foreach ($kerusakanBerulang as $item)
                     <li class="mb-2">
-                        <strong>{{ $item->lokasi->gedung }} - {{ $item->lokasi->ruangan }}</strong>
-                        — "{{ $item->deskripsi }}" terjadi
-                        <strong>{{ $item->total }}</strong> kali.
+                        <strong>{{ $item->lokasi->gedung }} - {{ $item->lokasi->ruangan }}</strong> terjadi
+                        <strong>{{ $item->total }}</strong> kali dalam minggu ini.
                     </li>
                 @endforeach
             </ul>

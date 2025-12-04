@@ -45,7 +45,7 @@
                             @foreach($notif as $notif)
                                 <li class="notification">
                                     <div class="media">
-                                        <img class="img-radius" src="{{ asset('flat/assets/images/user/avatar-1.jpg') }}" alt="User">
+                                        <img class="img-radius" src="{{ asset('flat/assets/images/user/profile.jpg') }}" alt="User">
                         
                                         <div class="media-body">
                                             <p>
@@ -74,7 +74,7 @@
                     </a>
                     <div class="dropdown-menu dropdown-menu-right profile-notification">
                         <div class="pro-head">
-                            <img src="{{ asset('flat/assets/images/user/avatar-1.jpg') }}" class="img-radius" alt="User-Profile-Image">
+                            <img src="{{ asset('flat/assets/images/user/profile.jpg') }}" class="img-radius" alt="User-Profile-Image">
                             <span>John Doe</span>
                             <form action="{{ route('logout') }}" method="POST" style="display:inline;">
                                 @csrf
